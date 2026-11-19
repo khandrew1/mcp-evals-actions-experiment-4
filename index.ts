@@ -6,7 +6,7 @@ import { MCPServer } from "mcp-use";
 import { oauthBetterAuthProvider } from "mcp-use/oauth/better-auth";
 import { z } from "zod";
 
-import { auth, authURL, resource, seedUsers } from "./auth.js";
+import { auth, authURL, publicOrigin, resource, seedUsers } from "./auth.js";
 import { consentPage, signInPage } from "./pages.js";
 
 // An OAuth-protected MCP server for testing Manufact evals with profiles. Every tool returns
@@ -54,7 +54,9 @@ server.app.get("/api/auth/oauth2/authorize", async (c) => {
   const headers = new Headers(response.headers);
   headers.delete("content-type");
   headers.delete("content-length");
-  headers.set("location", new URL(body.url, c.req.url).href);
+  // Resolve against the public origin: behind the Manufact gateway the request URL is the
+  // runtime's internal host.
+  headers.set("location", new URL(body.url, publicOrigin).href);
   return new Response(null, { status: 302, headers });
 });
 server.app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
