@@ -1,0 +1,24 @@
+{
+  "name": "mcp-evals-actions-experiment-4",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22.22.2" },
+  "scripts": {
+    "dev": "mcp-use dev",
+    "build": "mcp-use build",
+    "start": "mcp-use start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-auth/oauth-provider": "1.7.26",
+    "better-auth": "1.7.26",
+    "mcp-use": "^2.12.8",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@mcp-use/cli": "^5.1.1",
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.3"
+  }
+}

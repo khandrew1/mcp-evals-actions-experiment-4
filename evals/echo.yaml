@@ -1,0 +1,10 @@
+name: Echo
+flow:
+  - kind: user
+    content: "Use the echo tool to send back exactly this text: manufact evals ok"
+  - kind: tool_call
+    name: echo
+    args: { message: { contains: manufact evals ok } }
+rubric: Reports that the server sent back "manufact evals ok".
+clients:
+  inspector: { models: [openai/gpt-5-mini] }

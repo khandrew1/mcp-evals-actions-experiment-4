@@ -1,0 +1,10 @@
+# alice@evals.test is on Pro with 5 seats; bob@evals.test is on Free with 1 seat.
+name: Account plan
+flow:
+  - kind: user
+    content: What plan is my account on, and how many seats do I have?
+  - kind: tool_call
+    name: get_account
+rubric: States the plan name and the number of seats exactly as the get_account tool returned them.
+clients:
+  inspector: { models: [openai/gpt-5-mini] }

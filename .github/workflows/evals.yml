@@ -1,0 +1,71 @@
+# Runs the suites in evals/ against this server on a Manufact devspace, with the mcp-use/evals action.
+#
+# Needs, in the repository settings:
+#   secret    MANUFACT_TOKEN          Manufact API key for the server's organization
+#   variables MANUFACT_SERVER         server ID (the UUID in the server's dashboard URL)
+#             MCP_USE_CLOUD_API_URL   the devspace's API, https://<h>.ds.mcp-use.dev/api/v1
+#             MCP_USE_CLOUD_WEB_URL   the devspace, https://<h>.ds.mcp-use.dev
+name: Evals
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Profile ID to sign in with instead of the server's own (empty uses the server's)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  MCP_USE_CLOUD_API_URL: ${{ vars.MCP_USE_CLOUD_API_URL }}
+  MCP_USE_CLOUD_WEB_URL: ${{ vars.MCP_USE_CLOUD_WEB_URL }}
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wake the devspace
+        run: |
+          # A devspace sleeps after 5 idle minutes and answers 503 until it is awake. The edge only
+          # wakes it for requests that look like user activity, so send a navigation header.
+          for _ in $(seq 1 30); do
+            if curl -fsS -o /dev/null --max-time 10 -H "sec-fetch-user: ?1" "$MCP_USE_CLOUD_WEB_URL/health"; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::The devspace did not wake up"
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Until a released @mcp-use/cli has `evals run --profile` (mcp-use/mcp-use#3125).
+      - name: Install the preview CLI
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/cli" https://pkg.pr.new/@mcp-use/cli@3125
+          echo "EVALS_CLI_BIN=$RUNNER_TEMP/cli/node_modules/@mcp-use/cli/dist/bin.js" >> "$GITHUB_ENV"
+
+      - id: evals
+        uses: mcp-use/evals@feat/profile-input
+        with:
+          token: ${{ secrets.MANUFACT_TOKEN }}
+          server: ${{ vars.MANUFACT_SERVER }}
+          suites: evals/
+          profile: ${{ inputs.profile }}
+
+      - name: Outputs
+        if: always()
+        env:
+          RUN_IDS: ${{ steps.evals.outputs.run-ids }}
+          PASSED: ${{ steps.evals.outputs.passed }}
+          PASSED_COUNT: ${{ steps.evals.outputs.passed-count }}
+          FAILED_COUNT: ${{ steps.evals.outputs.failed-count }}
+          DASHBOARD: ${{ steps.evals.outputs.dashboard-url }}
+        run: |
+          echo "run-ids=$RUN_IDS"
+          echo "passed=$PASSED passed-count=$PASSED_COUNT failed-count=$FAILED_COUNT"
+          echo "dashboard-url=$DASHBOARD"

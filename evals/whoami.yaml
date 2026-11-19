@@ -1,0 +1,10 @@
+# Passes for any signed-in test account; the run's report shows which one the profile signed in as.
+name: Who is signed in
+flow:
+  - kind: user
+    content: Who am I signed in as on this server?
+  - kind: tool_call
+    name: whoami
+rubric: States the signed-in user's email address, an address ending in @evals.test, as the whoami tool returned it.
+clients:
+  inspector: { models: [openai/gpt-5-mini] }
