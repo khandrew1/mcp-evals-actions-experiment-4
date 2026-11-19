@@ -22,9 +22,13 @@ function page(title: string, body: string): string {
 </html>`;
 }
 
-export const signInPage = page(
-  "Sign in",
-  `
+export const signInPage = (testUsers: string[]): string =>
+  page(
+    "Sign in",
+    `
+<p>Continue as a test account:</p>
+${testUsers.map((email) => `<button type="button" data-test-user="${email}">${email}</button>`).join(" ")}
+<p>Or sign in with a password:</p>
 <form id="sign-in">
   <label>Email <input name="email" type="email" autocomplete="username" required></label>
   <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
@@ -55,8 +59,28 @@ export const signInPage = page(
     }
     error.textContent = result.message || 'Sign-in failed';
   });
+  document.querySelectorAll('[data-test-user]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      error.textContent = '';
+      const response = await fetch('/test-sign-in', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: button.dataset.testUser,
+          oauth_query: window.location.search.slice(1),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.url) {
+        window.location.replace(result.url);
+        return;
+      }
+      error.textContent = result.message || 'Sign-in failed';
+    });
+  });
 </script>`,
-);
+  );
 
 export const consentPage = page(
   "Authorize MCP client",

@@ -85,6 +85,14 @@ function testUsers(): { email: string; password: string; name: string }[] {
     });
 }
 
+/** Emails of the test accounts, for the sign-in page's account picker. */
+export const testUserEmails = (): string[] => testUsers().map((user) => user.email);
+
+/** A test account's password, or undefined for anyone else. */
+export function testUserPassword(email: string): string | undefined {
+  return testUsers().find((user) => user.email === email)?.password;
+}
+
 /** Create the test accounts in the in-memory store. */
 export async function seedUsers(): Promise<void> {
   if (building) return;

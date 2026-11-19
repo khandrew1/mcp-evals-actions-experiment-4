@@ -6,7 +6,15 @@ import { MCPServer } from "mcp-use";
 import { oauthBetterAuthProvider } from "mcp-use/oauth/better-auth";
 import { z } from "zod";
 
-import { auth, authURL, publicOrigin, resource, seedUsers } from "./auth.js";
+import {
+  auth,
+  authURL,
+  publicOrigin,
+  resource,
+  seedUsers,
+  testUserEmails,
+  testUserPassword,
+} from "./auth.js";
 import { consentPage, signInPage } from "./pages.js";
 
 // An OAuth-protected MCP server for testing Manufact evals with profiles. Every tool returns
@@ -76,7 +84,26 @@ server.app.get("/sign-out", async (c) => {
   headers.delete("content-length");
   return new Response("<!doctype html><p>Signed out.</p>", { status: 200, headers });
 });
-server.app.get("/sign-in", (c) => c.html(signInPage));
+server.app.get("/sign-in", (c) => c.html(signInPage(testUserEmails())));
+// Test-only account picker: signs in as a seeded test account with its configured password, so
+// a browser never has to type one. Anyone who can reach this server can sign in as a test user;
+// the tools only return fixed demo data.
+server.app.post("/test-sign-in", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { email?: unknown; oauth_query?: unknown };
+  const email = typeof body.email === "string" ? body.email : "";
+  const password = testUserPassword(email);
+  if (!password) return c.json({ message: "Not a test account" }, 400);
+  const headers = new Headers({ "content-type": "application/json", origin: publicOrigin });
+  const cookie = c.req.header("cookie");
+  if (cookie) headers.set("cookie", cookie);
+  return auth.handler(
+    new Request(`${publicOrigin}/api/auth/sign-in/email`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ email, password, oauth_query: body.oauth_query ?? "" }),
+    }),
+  );
+});
 server.app.get("/consent", (c) => c.html(consentPage));
 
 // --- Tools --------------------------------------------------------------------------------------
