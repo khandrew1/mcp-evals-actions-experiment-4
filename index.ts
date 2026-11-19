@@ -51,15 +51,31 @@ server.app.get("/api/auth/oauth2/authorize", async (c) => {
     .json()
     .catch(() => null)) as { redirect?: unknown; url?: unknown } | null;
   if (body?.redirect !== true || typeof body.url !== "string") return response;
-  const headers = new Headers(response.headers);
-  headers.delete("content-type");
-  headers.delete("content-length");
   // Resolve against the public origin: behind the Manufact gateway the request URL is the
-  // runtime's internal host.
-  headers.set("location", new URL(body.url, publicOrigin).href);
-  return new Response(null, { status: 302, headers });
+  // runtime's internal host. Redirect from the page rather than with a Location header: a
+  // devspace's local gateway (wrangler dev) rewrites response-header URLs on its own host to
+  // http://, which would drop the browser onto an http page.
+  const target = JSON.stringify(new URL(body.url, publicOrigin).href);
+  const headers = new Headers(response.headers);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.delete("content-length");
+  return new Response(
+    `<!doctype html><meta charset="utf-8"><title>Redirecting</title><script>location.replace(${target})</script>`,
+    { status: 200, headers },
+  );
 });
-server.app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+server.app.on(["GET", "POST"], "/api/auth/*", (c) => {
+  if (c.req.method === "POST") console.log(`auth POST ${c.req.path} origin=${c.req.header("origin")}`);
+  return auth.handler(c.req.raw);
+});
+// Ends this browser's session so the next connect signs in as someone else.
+server.app.get("/sign-out", async (c) => {
+  const response = await auth.api.signOut({ headers: c.req.raw.headers, asResponse: true });
+  const headers = new Headers(response.headers);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.delete("content-length");
+  return new Response("<!doctype html><p>Signed out.</p>", { status: 200, headers });
+});
 server.app.get("/sign-in", (c) => c.html(signInPage));
 server.app.get("/consent", (c) => c.html(consentPage));
 

@@ -53,7 +53,8 @@ export const auth = betterAuth({
   basePath: "/api/auth",
   secret: secret(),
   database: memoryAdapter(memory),
-  trustedOrigins: [publicOrigin],
+  // A devspace's local gateway (wrangler dev) hands requests on with an http:// origin.
+  trustedOrigins: [publicOrigin, publicOrigin.replace(/^https:/, "http:")],
   rateLimit: { enabled: false },
   emailAndPassword: { enabled: true, disableSignUp: true },
   plugins: [
